@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Belajar Abjad & Angka</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Fredoka+One&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation; /* Mencegah zoom saat double-tap di mobile */
+        }
+        .fredoka-font {
+            font-family: 'Fredoka One', cursive;
+        }
+        /* Animasi untuk kartu saat muncul */
+        @keyframes pop-in {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop-in {
+            animation: pop-in 0.3s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="bg-sky-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="container mx-auto max-w-2xl text-center">
+
+        <!-- Tampilan Menu Utama -->
+        <div id="menu-view">
+            <h1 class="text-4xl md:text-6xl font-bold text-sky-800 fredoka-font mb-2">Ayo Belajar!</h1>
+            <p class="text-slate-600 mb-8 text-lg">Pilih apa yang ingin kamu pelajari hari ini:</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <button onclick="startGame('alphabet')" class="bg-amber-400 hover:bg-amber-500 text-white font-bold py-6 px-4 rounded-xl shadow-lg transform hover:scale-105 transition-transform duration-200 text-2xl fredoka-font">
+                    Huruf Abjad
+                </button>
+                <button onclick="startGame('numbers')" class="bg-teal-400 hover:bg-teal-500 text-white font-bold py-6 px-4 rounded-xl shadow-lg transform hover:scale-105 transition-transform duration-200 text-2xl fredoka-font">
+                    Angka
+                </button>
+                <button onclick="startGame('combined')" class="bg-rose-400 hover:bg-rose-500 text-white font-bold py-6 px-4 rounded-xl shadow-lg transform hover:scale-105 transition-transform duration-200 text-2xl fredoka-font">
+                    Keduanya!
+                </button>
+            </div>
+        </div>
+
+        <!-- Tampilan Game -->
+        <div id="game-view" class="hidden">
+            <div id="card" class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm mx-auto flex flex-col items-center justify-center aspect-square relative">
+                <!-- Tombol Kembali ke Menu -->
+                <button id="home-btn" class="absolute top-4 left-4 text-slate-400 hover:text-sky-500 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M11 15l-3-3m0 0l3-3m-3 3h8a5 5 0 015 5v1" />
+                    </svg>
+                </button>
+                <!-- Tampilan Huruf/Angka -->
+                <div id="display" class="text-8xl md:text-9xl font-black text-slate-800" style="font-size: 10rem;"></div>
+                <!-- Tombol Suara -->
+                <button id="speak-button" class="mt-4 text-slate-500 hover:text-sky-500 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Tombol Navigasi -->
+            <div class="flex justify-between mt-8 max-w-sm mx-auto">
+                <button id="prev-btn" class="bg-white/80 hover:bg-white text-sky-600 font-bold py-4 px-8 rounded-lg shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+                    Kembali
+                </button>
+                <button id="next-btn" class="bg-sky-500 hover:bg-sky-600 text-white font-bold py-4 px-8 rounded-lg shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+                    Lanjut
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- DATA ---
+        const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+        const numbers = '0123456789'.split('');
+        const combined = [...alphabet, ...numbers];
+
+        // --- STATE ---
+        let currentData = [];
+        let currentIndex = 0;
+
+        // --- DOM ELEMENTS ---
+        const menuView = document.getElementById('menu-view');
+        const gameView = document.getElementById('game-view');
+        const display = document.getElementById('display');
+        const card = document.getElementById('card');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const speakButton = document.getElementById('speak-button');
+        const homeBtn = document.getElementById('home-btn');
+
+        // --- WEB SPEECH API SETUP ---
+        // Memastikan fitur suara berfungsi saat game dimulai
+        const synth = window.speechSynthesis;
+        let voices = [];
+
+        function populateVoiceList() {
+            voices = synth.getVoices().filter(voice => voice.lang.startsWith('id'));
+            if (synth.onvoiceschanged !== undefined) {
+                synth.onvoiceschanged = () => {
+                   voices = synth.getVoices().filter(voice => voice.lang.startsWith('id'));
+                };
+            }
+        }
+
+        populateVoiceList();
+
+        // --- FUNCTIONS ---
+
+        /**
+         * Memulai game dengan mode yang dipilih ('alphabet', 'numbers', 'combined')
+         * @param {string} mode - Mode permainan yang dipilih.
+         */
+        function startGame(mode) {
+            switch (mode) {
+                case 'alphabet':
+                    currentData = alphabet;
+                    break;
+                case 'numbers':
+                    currentData = numbers;
+                    break;
+                case 'combined':
+                    currentData = combined;
+                    break;
+            }
+            currentIndex = 0;
+            
+            // Sembunyikan menu dan tampilkan tampilan game
+            menuView.classList.add('hidden');
+            gameView.classList.remove('hidden');
+            
+            updateDisplay();
+        }
+        
+        /**
+         * Kembali ke menu utama.
+         */
+        function goHome() {
+            gameView.classList.add('hidden');
+            menuView.classList.remove('hidden');
+        }
+
+        /**
+         * Memperbarui tampilan kartu dengan item saat ini dan status tombol.
+         */
+        function updateDisplay() {
+            // Animasi kartu
+            card.classList.remove('animate-pop-in');
+            // Memicu reflow agar animasi bisa berjalan lagi
+            void card.offsetWidth; 
+            card.classList.add('animate-pop-in');
+
+            display.textContent = currentData[currentIndex];
+            
+            // Mengatur status tombol navigasi
+            prevBtn.disabled = currentIndex === 0;
+            nextBtn.disabled = currentIndex === currentData.length - 1;
+            
+            // Otomatis bunyikan suara saat item baru muncul
+            speakCurrent();
+        }
+
+        /**
+         * Mengucapkan huruf atau angka yang sedang ditampilkan.
+         */
+        function speakCurrent() {
+            if (synth.speaking) {
+                synth.cancel(); // Batalkan suara sebelumnya jika masih ada
+            }
+            if (currentData[currentIndex]) {
+                const utterThis = new SpeechSynthesisUtterance(currentData[currentIndex]);
+                utterThis.onend = function(event) {
+                    // console.log('SpeechSynthesisUtterance.onend');
+                }
+                utterThis.onerror = function(event) {
+                    console.error('SpeechSynthesisUtterance.onerror', event);
+                }
+                // Pilih suara Bahasa Indonesia jika tersedia
+                const indonesianVoice = voices.find(voice => voice.lang === 'id-ID');
+                utterThis.voice = indonesianVoice || voices[0];
+                utterThis.lang = 'id-ID';
+                utterThis.pitch = 1.1;
+                utterThis.rate = 0.8;
+                synth.speak(utterThis);
+            }
+        }
+        
+        // --- EVENT LISTENERS ---
+
+        // Tombol Navigasi
+        nextBtn.addEventListener('click', () => {
+            if (currentIndex < currentData.length - 1) {
+                currentIndex++;
+                updateDisplay();
+            }
+        });
+
+        prevBtn.addEventListener('click', () => {
+            if (currentIndex > 0) {
+                currentIndex--;
+                updateDisplay();
+            }
+        });
+
+        // Tombol Suara
+        speakButton.addEventListener('click', speakCurrent);
+        
+        // Tombol kembali ke menu
+        homeBtn.addEventListener('click', goHome);
+
+        // Navigasi dengan keyboard (panah kiri dan kanan)
+        document.addEventListener('keydown', (e) => {
+            // Pastikan navigasi keyboard hanya aktif saat di tampilan game
+            if (!gameView.classList.contains('hidden')) {
+                if (e.key === 'ArrowRight') {
+                    nextBtn.click();
+                } else if (e.key === 'ArrowLeft') {
+                    prevBtn.click();
+                } else if (e.key === ' ' || e.key === 'Enter') {
+                    // Mencegah spasi scroll halaman
+                    e.preventDefault();
+                    speakCurrent();
+                }
+            }
+        });
+        
+    </script>
+</body>
+</html>
