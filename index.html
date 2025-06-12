@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Selamat Datang di Seluruh Dunia!</title>
+    
+    <!-- Impor font yang ramah anak dari Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        /* CSS Reset dan Pengaturan Dasar */
+        body {
+            margin: 0;
+            font-family: 'Poppins', sans-serif;
+            /* Latar belakang gradasi yang ceria */
+            background: linear-gradient(135deg, #a8e6cf 0%, #dcedc1 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden; /* Mencegah scroll dari elemen animasi */
+            color: #333;
+        }
+
+        /* Kontainer utama untuk mengatur posisi di tengah */
+        .main-container {
+            position: relative;
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* Kotak putih tempat tulisan berada */
+        .welcome-box {
+            background: white;
+            padding: 40px 60px;
+            border-radius: 30px;
+            /* Bayangan lembut untuk efek 3D */
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 2;
+            animation: pop-in 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            opacity: 0;
+        }
+        
+        @keyframes pop-in {
+            from {
+                transform: scale(0.5);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* Teks utama "Selamat Datang" */
+        h1 {
+            /* Menggunakan font Fredoka One yang bulat dan lucu */
+            font-family: 'Fredoka One', cursive;
+            /* Ukuran font yang responsif */
+            font-size: clamp(2.5rem, 8vw, 5rem);
+            margin: 0;
+            /* Teks dengan warna gradasi agar lebih menarik */
+            background: linear-gradient(45deg, #ff6b6b, #feca57, #48dbfb, #1dd1a1);
+            background-size: 400% 400%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradient-animation 10s ease infinite;
+            /* Transisi untuk efek fade saat teks berganti */
+            transition: opacity 0.4s ease-in-out;
+        }
+
+        /* Animasi untuk warna gradasi pada teks */
+        @keyframes gradient-animation {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Sub-judul kecil di bawah */
+        p {
+            font-size: 1.1rem;
+            color: #555;
+            margin-top: 10px;
+        }
+
+        /* Elemen dekoratif (gelembung/lingkaran) */
+        .bubble {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            z-index: 1;
+            animation: float 20s infinite ease-in-out;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-30px); }
+            100% { transform: translateY(0); }
+        }
+
+        /* Pengaturan untuk setiap gelembung agar berbeda */
+        .bubble:nth-child(1) { width: 80px; height: 80px; top: 10%; left: 10%; animation-duration: 15s; }
+        .bubble:nth-child(2) { width: 40px; height: 40px; top: 20%; left: 80%; animation-duration: 18s; animation-delay: 2s; }
+        .bubble:nth-child(3) { width: 60px; height: 60px; top: 70%; left: 5%; animation-duration: 22s; }
+        .bubble:nth-child(4) { width: 100px; height: 100px; top: 80%; left: 90%; animation-duration: 16s; animation-delay: 1s; }
+        .bubble:nth-child(5) { width: 30px; height: 30px; top: 50%; left: 50%; animation-duration: 25s; }
+
+    </style>
+</head>
+<body>
+
+    <!-- Elemen Dekorasi Gelembung -->
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+
+    <div class="main-container">
+        <div class="welcome-box">
+            <!-- Elemen h1 ini akan diubah oleh JavaScript -->
+            <h1 id="welcome-text">Selamat Datang</h1>
+            <p>di dunia penuh warna!</p>
+        </div>
+    </div>
+
+    <script>
+        // Daftar ucapan selamat datang dalam berbagai bahasa
+        const greetings = [
+            "Selamat Datang", // Indonesia
+            "Welcome",        // Inggris
+            "Bienvenido",     // Spanyol
+            "Bienvenue",      // Prancis
+            "Willkommen",     // Jerman
+            "Benvenuto",      // Italia
+            "ようこそ",       // Jepang (Yōkoso)
+            "欢迎",           // Mandarin (Huānyíng)
+            "환영합니다",       // Korea (Hwan-yeong-hamnida)
+            "Bem-vindo",      // Portugis
+            "Karibu",         // Swahili
+            "أهلاً وسهلاً"     // Arab (Ahlan wa sahlan)
+        ];
+
+        // Dapatkan elemen h1 dari HTML
+        const welcomeTextElement = document.getElementById('welcome-text');
+
+        let currentIndex = 0;
+
+        // Fungsi untuk mengganti teks
+        function changeGreeting() {
+            // 1. Buat teks menghilang (fade out)
+            welcomeTextElement.style.opacity = 0;
+
+            // 2. Tunggu transisi selesai (400ms, sesuai di CSS)
+            setTimeout(() => {
+                // 3. Ganti indeks ke bahasa berikutnya
+                currentIndex = (currentIndex + 1) % greetings.length;
+
+                // 4. Update konten teks di elemen h1
+                welcomeTextElement.textContent = greetings[currentIndex];
+
+                // 5. Buat teks muncul kembali (fade in)
+                welcomeTextElement.style.opacity = 1;
+            }, 400); // Waktu harus cocok dengan transisi di CSS
+        }
+
+        // Jalankan fungsi changeGreeting setiap 3 detik (3000 milidetik)
+        setInterval(changeGreeting, 3000);
+    </script>
+
+</body>
+</html>
