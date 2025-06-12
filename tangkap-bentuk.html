@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Interaktif Anak - Tangkap Bentuk!</title>
+    
+    <!-- Memuat Tailwind CSS untuk styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Memuat library anime.js untuk animasi -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    
+    <!-- Memuat library Tone.js untuk efek suara -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    
+    <!-- Memuat Google Fonts untuk tampilan yang lebih menarik -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Menggunakan font kustom yang sudah diimpor */
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #f0f9ff;
+        }
+        h1, button, .font-title {
+            font-family: 'Fredoka One', cursive;
+        }
+        /* Style untuk area permainan agar tidak bisa di-select teksnya */
+        #game-area {
+            -webkit-user-select: none; /* Safari */
+            -ms-user-select: none; /* IE 10+ */
+            user-select: none; /* Standard syntax */
+        }
+        /* Kursor pointer untuk bentuk yang bisa diklik */
+        .shape {
+            cursor: pointer;
+        }
+        /* Style untuk modal/layar game over */
+        #game-over-modal {
+            transition: opacity 0.3s ease;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+
+    <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl text-center w-full max-w-md mx-4 relative">
+        
+        <!-- Judul Game -->
+        <h1 class="text-4xl font-bold text-cyan-600 mb-2">Tangkap Bentuk!</h1>
+        <p class="text-gray-500 mb-4">Klik bentuk sebanyak mungkin sebelum waktu habis!</p>
+
+        <!-- Info Bar (Skor & Waktu) -->
+        <div class="flex justify-between bg-gray-100 p-3 rounded-lg mb-4">
+            <div class="text-center">
+                <span class="text-lg font-bold text-gray-700">SKOR</span>
+                <span id="score" class="block text-2xl font-black text-amber-500">0</span>
+            </div>
+             <div class="text-center">
+                <span class="text-lg font-bold text-gray-700">WAKTU</span>
+                <span id="timer" class="block text-2xl font-black text-red-500">30</span>
+            </div>
+        </div>
+
+        <!-- Area Permainan -->
+        <div id="game-area" class="relative w-full h-80 sm:h-96 bg-sky-100 rounded-lg overflow-hidden shadow-inner mb-4 border-2 border-sky-200">
+            <!-- Bentuk-bentuk akan muncul di sini -->
+        </div>
+
+        <!-- Tombol Mulai -->
+        <button id="start-btn" class="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3 px-4 rounded-lg text-xl transition-transform transform hover:scale-105 shadow-md">
+            Mulai Permainan
+        </button>
+
+        <!-- Layar Game Over (tersembunyi secara default) -->
+        <div id="game-over-modal" class="absolute inset-0 bg-black bg-opacity-70 flex-col items-center justify-center rounded-2xl p-8 hidden">
+            <h2 class="font-title text-5xl text-white mb-4">Waktu Habis!</h2>
+            <p class="text-white text-xl mb-2">Skor Akhir Kamu:</p>
+            <p id="final-score" class="font-title text-7xl text-amber-400 mb-8">0</p>
+            <button id="restart-btn" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg text-2xl transition-transform transform hover:scale-105 shadow-md">
+                Main Lagi
+            </button>
+        </div>
+        
+    </div>
+
+    <script>
+        // --- SELEKSI ELEMEN DOM ---
+        const gameArea = document.getElementById('game-area');
+        const scoreEl = document.getElementById('score');
+        const timerEl = document.getElementById('timer');
+        const startBtn = document.getElementById('start-btn');
+        const gameOverModal = document.getElementById('game-over-modal');
+        const finalScoreEl = document.getElementById('final-score');
+        const restartBtn = document.getElementById('restart-btn');
+
+        // --- VARIABEL STATUS GAME ---
+        let score = 0;
+        let gameInProgress = false;
+        let currentShape = null;
+        let animationTimeout;
+        const GAME_DURATION = 30; // Durasi permainan dalam detik
+        let timer = GAME_DURATION;
+        let timerInterval;
+
+        // --- EFEK SUARA (TONE.JS) ---
+        // Membuat synthesizer untuk suara
+        const synth = new Tone.Synth().toDestination();
+        const polySynth = new Tone.PolySynth(Tone.Synth).toDestination();
+
+        // Fungsi untuk memainkan suara saat bentuk muncul
+        const playSpawnSound = () => {
+             if(Tone.context.state !== 'running') Tone.context.resume();
+             synth.triggerAttackRelease("C4", "8n");
+        }
+        // Fungsi untuk memainkan suara saat bentuk diklik
+        const playClickSound = () => {
+             if(Tone.context.state !== 'running') Tone.context.resume();
+             synth.triggerAttackRelease("G4", "8n");
+        }
+        // Fungsi untuk memainkan suara saat game over
+        const playGameOverSound = () => {
+             if(Tone.context.state !== 'running') Tone.context.resume();
+             polySynth.triggerAttackRelease(["C3", "E3", "G3"], 1);
+        }
+
+        // --- FUNGSI UTAMA ---
+
+        /**
+         * Memulai atau mereset permainan.
+         */
+        function startGame() {
+            if (gameInProgress) return;
+            
+            // Resume konteks audio jika belum berjalan (interaksi pengguna diperlukan)
+            Tone.start();
+
+            // Sembunyikan layar game over
+            gameOverModal.classList.add('hidden');
+            gameOverModal.classList.remove('flex');
+            
+            // Reset state
+            score = 0;
+            timer = GAME_DURATION;
+            gameInProgress = true;
+            scoreEl.textContent = score;
+            timerEl.textContent = timer;
+            
+            startBtn.disabled = true;
+            startBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            // Mulai timer hitung mundur
+            timerInterval = setInterval(() => {
+                timer--;
+                timerEl.textContent = timer;
+                if (timer <= 0) {
+                    endGame();
+                }
+            }, 1000);
+
+            spawnShape();
+        }
+
+        /**
+         * Mengakhiri permainan dan menampilkan skor.
+         */
+        function endGame() {
+            gameInProgress = false;
+            clearInterval(timerInterval);
+            clearTimeout(animationTimeout);
+
+            if (currentShape) {
+                currentShape.remove();
+                currentShape = null;
+            }
+
+            // Tampilkan layar game over
+            finalScoreEl.textContent = score;
+            gameOverModal.classList.remove('hidden');
+            gameOverModal.classList.add('flex');
+            
+            startBtn.disabled = false;
+            startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+
+            playGameOverSound();
+        }
+
+        /**
+         * Memunculkan satu bentuk di posisi acak.
+         */
+        function spawnShape() {
+            if (!gameInProgress) return;
+
+            if (currentShape) {
+                currentShape.remove();
+            }
+
+            const shape = document.createElement('div');
+            shape.classList.add('shape', 'absolute');
+
+            // Randomisasi Bentuk
+            const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+            const size = Math.random() * 40 + 30;
+            
+            shape.style.width = `${size}px`;
+            shape.style.height = `${size}px`;
+            shape.style.backgroundColor = randomColor;
+            shape.style.borderRadius = Math.random() > 0.5 ? '50%' : '15%';
+
+            const gameAreaRect = gameArea.getBoundingClientRect();
+            shape.style.top = `${Math.random() * (gameAreaRect.height - size)}px`;
+            shape.style.left = `${Math.random() * (gameAreaRect.width - size)}px`;
+            
+            shape.addEventListener('click', handleShapeClick);
+
+            currentShape = shape;
+            gameArea.appendChild(shape);
+            
+            playSpawnSound();
+
+            // --- TINGKAT KESULITAN DINAMIS ---
+            // Bentuk akan lebih cepat hilang seiring skor bertambah
+            const lifeSpan = Math.max(300, 1500 - score * 25); 
+
+            const timeline = anime.timeline({
+                complete: () => {
+                    if (gameInProgress && document.body.contains(currentShape)) {
+                        spawnShape();
+                    }
+                }
+            });
+
+            timeline
+                .add({
+                    targets: shape,
+                    scale: [0, 1],
+                    opacity: [0, 1],
+                    duration: 400,
+                    easing: 'easeOutElastic(1, .8)'
+                })
+                .add({
+                    targets: shape,
+                    scale: 0,
+                    opacity: 0,
+                    duration: 300,
+                    easing: 'easeInBack',
+                    delay: lifeSpan
+                });
+        }
+
+        /**
+         * Handler ketika sebuah bentuk berhasil di-klik.
+         */
+        function handleShapeClick(event) {
+            if (!gameInProgress) return;
+            
+            playClickSound();
+            
+            anime.remove(event.target);
+            event.target.removeEventListener('click', handleShapeClick);
+            
+            score++;
+            scoreEl.textContent = score;
+
+            anime({
+                targets: event.target,
+                scale: [1, 1.5],
+                opacity: 0,
+                rotate: '1turn',
+                duration: 500,
+                easing: 'easeInOutExpo',
+                complete: () => {
+                    event.target.remove();
+                    currentShape = null;
+                    animationTimeout = setTimeout(spawnShape, 100);
+                }
+            });
+        }
+
+        // Tambahkan event listener ke tombol start dan restart
+        startBtn.addEventListener('click', startGame);
+        restartBtn.addEventListener('click', startGame);
+
+    </script>
+</body>
+</html>
