@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Search Generator</title>
+    <!-- Tailwind CSS CDN for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles can be added here if needed, but Tailwind is preferred */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .grid-container {
+            display: grid;
+            /* grid-template-columns will be set dynamically by JavaScript */
+            gap: 2px; /* Small gap between cells */
+        }
+        .grid-cell {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px; /* Default cell width */
+            height: 40px; /* Default cell height */
+            background-color: #f3f4f6; /* Light gray background for cells */
+            border-radius: 2px; /* Small rounded corners for cells */
+            font-weight: 600; /* Semi-bold text */
+            color: #1f2937; /* Dark gray text color */
+            font-size: 1rem; /* Default font size */
+        }
+        /* Responsive adjustments for smaller screens */
+        @media (max-width: 640px) {
+            .grid-cell {
+                width: 32px;
+                height: 32px;
+                font-size: 0.75rem; /* Smaller font on small screens */
+            }
+        }
+
+        /* --- Print Styles --- */
+        @media print {
+            body {
+                background: none !important; /* Hapus latar belakang gradient */
+                color: #000 !important; /* Pastikan teks hitam untuk pencetakan */
+                margin: 0;
+                padding: 0;
+            }
+            .main-container {
+                box-shadow: none !important; /* Hapus bayangan */
+                transform: none !important; /* Hapus transformasi */
+                max-width: 100% !important; /* Gunakan lebar penuh */
+                padding: 1rem !important; /* Atur padding untuk cetak */
+            }
+            /* Sembunyikan bagian input */
+            .input-section {
+                display: none !important;
+            }
+            /* Jadikan bagian teka-teki mengambil lebar penuh saat dicetak */
+            .grid-parent-container { /* Kontainer grid-cols-1 md:grid-cols-2 */
+                grid-template-columns: 1fr !important; /* Jadikan satu kolom */
+                gap: 0 !important;
+            }
+            .puzzle-section {
+                box-shadow: none !important; /* Hapus bayangan */
+                background-color: transparent !important; /* Hapus latar belakang */
+                padding: 0 !important; /* Hapus padding */
+            }
+            .grid-container {
+                gap: 1px !important; /* Jarak yang lebih rapat antar sel */
+            }
+            .grid-cell {
+                border: 1px solid #ccc !important; /* Tambahkan border untuk kejelasan cetak */
+                background-color: #fff !important;
+                color: #000 !important;
+            }
+            h1, h2 {
+                color: #000 !important;
+            }
+            /* Pastikan daftar kata terlihat jelas saat dicetak */
+            #wordsToFindList {
+                grid-template-columns: repeat(3, minmax(0, 1fr)) !important; /* Sesuaikan kolom daftar kata */
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 font-sans p-4 sm:p-8 flex items-center justify-center">
+
+    <div class="bg-white rounded-xl shadow-2xl p-6 sm:p-10 w-full max-w-4xl transform transition-all duration-300 hover:scale-105 main-container">
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-center text-gray-800 mb-8 tracking-tight leading-tight">
+            Word Search Generator
+        </h1>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 grid-parent-container">
+            <!-- Input section -->
+            <div class="space-y-4 input-section">
+                <label for="words" class="block text-lg font-semibold text-gray-700">
+                    Masukkan Kata-kata (pisahkan dengan koma atau baris baru):
+                </label>
+                <textarea
+                    id="words"
+                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-800 resize-y min-h-[120px]"
+                    placeholder="Contoh: APPLE,BANANA,CHERRY"
+                >REACT,JAVASCRIPT,TAILWIND,CSS,HTML,GENERATOR,PUZZLE,WORD,SEARCH</textarea>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="rows" class="block text-lg font-semibold text-gray-700 mb-1">
+                            Baris:
+                        </label>
+                        <input
+                            type="number"
+                            id="rows"
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-800"
+                            value="15"
+                            min="5"
+                        />
+                    </div>
+                    <div>
+                        <label for="cols" class="block text-lg font-semibold text-gray-700 mb-1">
+                            Kolom:
+                        </label>
+                        <input
+                            type="number"
+                            id="cols"
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-800"
+                            value="15"
+                            min="5"
+                        />
+                    </div>
+                </div>
+
+                <button
+                    id="generateButton"
+                    class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold text-lg hover:bg-blue-700 transition-colors duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-1"
+                >
+                    Generate Puzzle
+                </button>
+                <button
+                    id="printButton"
+                    class="w-full bg-green-600 text-white py-3 mt-4 rounded-lg font-bold text-lg hover:bg-green-700 transition-colors duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-1"
+                >
+                    Cetak Teka-teki
+                </button>
+                <p id="message" class="text-red-600 text-center mt-2 font-medium"></p>
+            </div>
+
+            <!-- Puzzle display and word list section -->
+            <div class="space-y-4 bg-gray-50 p-6 rounded-lg shadow-inner puzzle-section">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Teka-teki Anda:</h2>
+                <div id="puzzleContainer" class="overflow-x-auto overflow-y-auto max-h-[400px] border border-gray-200 rounded-lg bg-white p-2">
+                    <!-- Puzzle grid will be rendered here by JavaScript -->
+                    <div id="puzzleGrid" class="grid-container"></div>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800 mt-6 mb-3">Kata-kata untuk Dicari:</h2>
+                <ul id="wordsToFindList" class="list-disc list-inside text-gray-700 grid grid-cols-2 sm:grid-cols-3 gap-x-4">
+                    <!-- Words to find will be rendered here by JavaScript -->
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM elements
+        const wordsInput = document.getElementById('words');
+        const rowsInput = document.getElementById('rows');
+        const colsInput = document.getElementById('cols');
+        const generateButton = document.getElementById('generateButton');
+        const printButton = document.getElementById('printButton'); // New print button reference
+        const puzzleGridContainer = document.getElementById('puzzleGrid');
+        const wordsToFindList = document.getElementById('wordsToFindList');
+        const messageDisplay = document.getElementById('message');
+
+        // Characters for filling empty spaces in the puzzle
+        const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+        /**
+         * Generates a random letter from the alphabet.
+         * @returns {string} A random uppercase letter.
+         */
+        const getRandomLetter = () => {
+            return ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
+        };
+
+        /**
+         * Checks if a word can be placed at a specific position in a given direction.
+         * @param {Array<Array<string>>} currentGrid - The current state of the puzzle grid.
+         * @param {string} word - The word to place.
+         * @param {number} r - Starting row.
+         * @param {number} c - Starting column.
+         * @param {Object} direction - The direction of placement (dr, dc).
+         * @param {number} totalRows - Total number of rows in the grid.
+         * @param {number} totalCols - Total number of columns in the grid.
+         * @returns {boolean} True if the word can be placed, false otherwise.
+         */
+        const canPlaceWord = (currentGrid, word, r, c, direction, totalRows, totalCols) => {
+            for (let i = 0; i < word.length; i++) {
+                const newR = r + i * direction.dr;
+                const newC = c + i * direction.dc;
+
+                // Check if out of bounds
+                if (newR < 0 || newR >= totalRows || newC < 0 || newC >= totalCols) {
+                    return false;
+                }
+
+                // Check for collisions: if cell is not empty, it must match the word's letter
+                if (currentGrid[newR][newC] !== '' && currentGrid[newR][newC] !== word[i]) {
+                    return false;
+                }
+            }
+            return true;
+        };
+
+        /**
+         * Places a word into the grid at a specific position and direction.
+         * Assumes canPlaceWord has already confirmed validity.
+         * @param {Array<Array<string>>} currentGrid - The grid to place the word into.
+         * @param {string} word - The word to place.
+         * @param {number} r - Starting row.
+         * @param {number} c - Starting column.
+         * @param {Object} direction - The direction of placement (dr, dc).
+         * @returns {Array<Array<string>>} The updated grid.
+         */
+        const placeWord = (currentGrid, word, r, c, direction) => {
+            // Create a deep copy of the grid to avoid modifying the original directly
+            const newGrid = currentGrid.map(row => [...row]);
+            for (let i = 0; i < word.length; i++) {
+                const newR = r + i * direction.dr;
+                const newC = c + i * direction.dc;
+                newGrid[newR][newC] = word[i];
+            }
+            return newGrid;
+        };
+
+        /**
+         * Renders the puzzle grid to the DOM.
+         * @param {Array<Array<string>>} grid - The 2D array representing the puzzle.
+         * @param {number} totalRows - The number of rows in the grid.
+         * @param {number} totalCols - The number of columns in the grid.
+         */
+        const renderPuzzle = (grid, totalRows, totalCols) => {
+            puzzleGridContainer.innerHTML = ''; // Clear previous grid
+            puzzleGridContainer.style.gridTemplateColumns = `repeat(${totalCols}, minmax(0, 1fr))`;
+
+            // Calculate dynamic font size based on grid size
+            const fontSize = Math.min(18, Math.max(10, 200 / Math.max(totalRows, totalCols)));
+
+            grid.forEach((row, rIdx) => {
+                row.forEach((cell, cIdx) => {
+                    const cellDiv = document.createElement('div');
+                    cellDiv.className = 'grid-cell'; // Apply base styling from CSS
+                    cellDiv.textContent = cell;
+                    cellDiv.style.fontSize = `${fontSize}px`; // Apply dynamic font size
+                    puzzleGridContainer.appendChild(cellDiv);
+                });
+            });
+        };
+
+        /**
+         * Renders the list of words to find.
+         * @param {Array<string>} words - The array of words to find.
+         */
+        const renderWordsToFind = (words) => {
+            wordsToFindList.innerHTML = ''; // Clear previous list
+            if (words.length > 0) {
+                words.forEach(word => {
+                    const listItem = document.createElement('li');
+                    listItem.className = 'truncate'; // Tailwind class to truncate long words
+                    listItem.textContent = word;
+                    wordsToFindList.appendChild(listItem);
+                });
+            } else {
+                const listItem = document.createElement('li');
+                listItem.textContent = 'Tidak ada kata untuk dicari.';
+                wordsToFindList.appendChild(listItem);
+            }
+        };
+
+        /**
+         * Main function to generate and display the word search puzzle.
+         */
+        const generatePuzzle = () => {
+            messageDisplay.textContent = ''; // Clear previous messages
+
+            const rows = parseInt(rowsInput.value);
+            const cols = parseInt(colsInput.value);
+
+            // Basic validation for grid size
+            if (rows <= 0 || cols <= 0) {
+                messageDisplay.textContent = "Ukuran grid harus lebih besar dari 0.";
+                return;
+            }
+
+            // Initialize an empty grid
+            let grid = Array(rows).fill(null).map(() => Array(cols).fill(''));
+
+            // Process words from input: trim, convert to uppercase, remove empty, and sort by length (longest first)
+            const parsedWords = wordsInput.value
+                .split(/[,;\n]/)
+                .map(word => word.trim().toUpperCase())
+                .filter(word => word.length > 0)
+                .sort((a, b) => b.length - a.length); // Place longer words first for better density
+
+            renderWordsToFind(parsedWords); // Display words to find immediately
+
+            // Define possible directions for word placement (horizontal, vertical, diagonal)
+            const directions = [
+                { dr: 0, dc: 1 },  // Horizontal (left to right)
+                { dr: 1, dc: 0 },  // Vertical (top to bottom)
+                { dr: 1, dc: 1 },  // Diagonal (top-left to bottom-right)
+                { dr: 1, dc: -1 }, // Diagonal (top-right to bottom-left)
+                { dr: 0, dc: -1 }, // Horizontal (right to left)
+                { dr: -1, dc: 0 }, // Vertical (bottom to top)
+                { dr: -1, dc: -1 },// Diagonal (bottom-right to top-left)
+                { dr: -1, dc: 1 }  // Diagonal (bottom-left to top-right)
+            ];
+
+            let placedWordsCount = 0;
+            // Attempt to place each word into the grid
+            for (const word of parsedWords) {
+                let wordPlaced = false;
+                let attempts = 0;
+                const maxAttempts = rows * cols * 2; // Limit attempts to prevent infinite loops
+
+                // Shuffle directions for more random placement
+                const shuffledDirections = [...directions].sort(() => Math.random() - 0.5);
+
+                while (!wordPlaced && attempts < maxAttempts) {
+                    const startR = Math.floor(Math.random() * rows);
+                    const startC = Math.floor(Math.random() * cols);
+                    const randomDirection = shuffledDirections[Math.floor(Math.random() * shuffledDirections.length)];
+
+                    if (canPlaceWord(grid, word, startR, startC, randomDirection, rows, cols)) {
+                        grid = placeWord(grid, word, startR, startC, randomDirection);
+                        wordPlaced = true;
+                        placedWordsCount++;
+                    }
+                    attempts++;
+                }
+            }
+
+            // Display messages based on placement success
+            if (placedWordsCount === 0 && parsedWords.length > 0) {
+                messageDisplay.textContent = "Tidak dapat menempatkan kata-kata yang cukup. Coba ukuran grid yang lebih besar atau lebih sedikit kata.";
+            } else if (placedWordsCount < parsedWords.length) {
+                messageDisplay.textContent = `Beberapa kata tidak dapat ditempatkan. Ditempatkan: ${placedWordsCount} dari ${parsedWords.length} kata.`;
+            }
+
+            // Fill remaining empty cells with random letters
+            const finalGrid = grid.map(row =>
+                row.map(cell => cell === '' ? getRandomLetter() : cell)
+            );
+
+            renderPuzzle(finalGrid, rows, cols); // Render the final puzzle
+        };
+
+        // Event listener for the generate button
+        generateButton.addEventListener('click', generatePuzzle);
+
+        // Event listener for the print button
+        printButton.addEventListener('click', () => {
+            window.print(); // Triggers the browser's print dialog
+        });
+
+        // Initial puzzle generation when the page loads
+        window.onload = generatePuzzle;
+    </script>
+</body>
+</html>
