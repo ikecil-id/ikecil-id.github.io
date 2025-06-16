@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Search Fun!</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* Light blue-gray background */
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh; /* Ensure full viewport height */
+            width: 100vw; /* Ensure full viewport width */
+            padding: 20px;
+            box-sizing: border-box;
+            overflow: hidden; /* Prevent scrolling if content slightly overflows */
+        }
+
+        .game-container {
+            background-color: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 95%; /* Allow it to be wider */
+            max-height: 95%; /* Allow it to be taller */
+            width: 100%;
+            height: 100%; /* Make it take up more vertical space */
+            flex-grow: 1; /* Allow it to grow within the body flex container */
+            justify-content: space-between; /* Distribute content vertically */
+        }
+
+        h1 {
+            color: #4a5568; /* Darker gray for heading */
+            margin-bottom: 25px;
+            font-size: 2.5rem; /* Larger heading */
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 25px;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .controls select,
+        .controls button {
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid #a0aec0; /* Light border */
+            background-color: #edf2f7; /* Very light gray */
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .controls select:hover,
+        .controls button:hover {
+            border-color: #4c51bf; /* Indigo on hover */
+            background-color: #e2e8f0; /* Slightly darker on hover */
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .controls button.primary {
+            background-color: #667eea; /* Primary blue */
+            color: white;
+            border-color: #5a67d8;
+        }
+
+        .controls button.primary:hover {
+            background-color: #5a67d8;
+            border-color: #4c51bf;
+        }
+
+        .setup-options {
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .setup-options label {
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .setup-options input[type="radio"] {
+            margin-right: 8px;
+            transform: scale(1.2); /* Slightly larger radio buttons */
+        }
+
+        .dynamic-words-input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 2px solid #a0aec0;
+            margin-top: 10px;
+            font-size: 1rem;
+            color: #333;
+            box-sizing: border-box;
+        }
+        .dynamic-words-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+
+        .game-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+            width: 100%;
+            flex-grow: 1; /* Allow game area to fill available space */
+            justify-content: center; /* Center content vertically in game area */
+        }
+
+        @media (min-width: 768px) {
+            .game-area {
+                flex-direction: row;
+                justify-content: center;
+                align-items: flex-start;
+            }
+        }
+
+        #word-search-grid {
+            display: grid;
+            border: 4px solid #a0aec0; /* Thick border for grid */
+            border-radius: 15px;
+            background-color: #e2e8f0; /* Light background for grid cells */
+            overflow: hidden;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            margin-bottom: 20px;
+            /* Ensure grid takes appropriate space */
+            width: clamp(200px, 80vw, 480px); /* Responsive max width for grid */
+            height: clamp(200px, 80vw, 480px); /* Keep it square and responsive */
+        }
+
+        .grid-cell {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: 600;
+            color: #2d3748; /* Dark gray for letters */
+            background-color: transparent;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            user-select: none; /* Prevent text selection */
+            cursor: grab;
+            /* Make cell size and font size responsive */
+            font-size: clamp(0.8rem, 4vw, 1.2rem); /* Responsive font size */
+            aspect-ratio: 1 / 1; /* Keep cells square */
+        }
+
+        .grid-cell.selected {
+            background-color: #bee3f8; /* Light blue for selected cells */
+        }
+
+        .grid-cell.found-word {
+            background-color: #81e6d9; /* Teal for found words */
+            color: #1a202c; /* Darker color for found word text */
+            font-weight: 700;
+            animation: foundAnimation 0.5s ease-in-out forwards;
+        }
+
+        @keyframes foundAnimation {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        #word-list {
+            background-color: #f7fafc; /* Lighter background for word list */
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 300px; /* Still a reasonable max for desktop side-by-side */
+        }
+
+        #word-list h2 {
+            font-size: 1.5rem;
+            color: #4a5568;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        #word-list ul {
+            list-style: none;
+            padding: 0;
+            text-align: center;
+        }
+
+        #word-list li {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+            padding: 5px;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+            color: #4a5568;
+            font-weight: 500;
+        }
+
+        #word-list li.found {
+            text-decoration: line-through;
+            color: #68d391; /* Green for found words in list */
+            font-weight: 700;
+            background-color: #e6fffa; /* Very light green background */
+        }
+
+        /* Further responsive adjustments for smaller screens */
+        @media (max-width: 767px) {
+            .game-area {
+                gap: 20px; /* Reduce gap on smaller screens */
+            }
+            h1 {
+                font-size: 2.2rem;
+            }
+        }
+        @media (max-width: 480px) {
+            .game-container {
+                padding: 20px; /* Reduce padding on very small screens */
+            }
+            h1 {
+                font-size: 1.8rem;
+                margin-bottom: 15px;
+            }
+            .controls {
+                gap: 10px;
+                margin-bottom: 15px;
+            }
+            .controls select,
+            .controls button {
+                padding: 8px 15px;
+                font-size: 0.9rem;
+            }
+            .setup-options {
+                gap: 8px;
+                margin-bottom: 15px;
+            }
+            .dynamic-words-input {
+                font-size: 0.9rem;
+                padding: 8px;
+            }
+            #word-list {
+                padding: 15px;
+            }
+            #word-list h2 {
+                font-size: 1.3rem;
+                margin-bottom: 10px;
+            }
+            #word-list li {
+                font-size: 1rem;
+            }
+        }
+        @media (max-width: 320px) {
+            .controls select,
+            .controls button {
+                font-size: 0.8rem;
+                padding: 6px 12px;
+            }
+            .dynamic-words-input {
+                font-size: 0.8rem;
+            }
+        }
+
+        .message-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #4a5568;
+            color: white;
+            padding: 20px 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            display: none;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .message-box.show {
+            display: block;
+        }
+
+        /* Print Stylesheet */
+        @media print {
+            body {
+                background-color: #fff !important; /* White background for print */
+                padding: 0 !important;
+                margin: 0 !important;
+                display: block !important; /* Override flex for body */
+            }
+            .game-container {
+                box-shadow: none !important;
+                background-color: transparent !important;
+                border: none !important;
+                padding: 20px !important; /* Add some padding for the print content */
+                width: 100% !important;
+                max-width: 100% !important;
+                height: auto !important;
+                position: static !important;
+                display: block !important;
+            }
+            h1, .controls, .setup-options, .message-box {
+                display: none !important; /* Hide these elements when printing */
+            }
+            .game-area {
+                display: flex !important;
+                flex-direction: column !important; /* Stack grid and word list vertically */
+                align-items: center !important;
+                gap: 20px !important; /* Space between grid and list on print */
+                width: 100% !important;
+                max-width: 100% !important;
+                height: auto !important;
+                box-shadow: none !important;
+                background-color: transparent !important;
+                padding: 0 !important;
+            }
+            #word-search-grid {
+                width: 90% !important; /* Max width for grid on print */
+                max-width: 500px !important; /* Limit grid size for A4/Letter */
+                height: auto !important; /* Let height adjust based on content */
+                aspect-ratio: 1 / 1 !important; /* Maintain square aspect ratio */
+                margin-bottom: 20px !important; /* Space after grid */
+                page-break-inside: avoid; /* Prevent breaking grid across pages */
+                box-shadow: none !important;
+                border: 1px solid #333 !important; /* Solid border for grid */
+                background-color: #fff !important;
+            }
+            .grid-cell {
+                font-size: 0.9rem !important; /* Smaller font for print */
+                padding: 1px !important; /* Reduced padding for compact cells */
+                border: 0.5px solid #eee; /* Light border between cells */
+            }
+            #word-list {
+                display: block !important; /* Ensure word list is visible for print */
+                width: 90% !important; /* Max width for word list on print */
+                max-width: 500px !important; /* Match grid max width */
+                box-shadow: none !important;
+                border: none !important;
+                padding: 0 !important;
+                background-color: #fff !important;
+            }
+            #word-list h2 {
+                font-size: 1.1rem !important;
+                margin-bottom: 10px !important;
+                color: #333 !important;
+            }
+            #word-list ul {
+                display: flex;
+                flex-wrap: wrap; /* Allow words to wrap into multiple columns */
+                justify-content: center; /* Center words */
+                gap: 5px 15px; /* Space between words */
+            }
+            #word-list li {
+                font-size: 0.8rem !important;
+                margin-bottom: 0 !important;
+                padding: 2px 5px !important;
+                border: none !important;
+                color: #333 !important;
+                text-decoration: none !important; /* Ensure no strikethrough on print */
+                background-color: transparent !important;
+            }
+            #word-list li.found { /* Don't show found styling on print */
+                text-decoration: none !important;
+                color: #333 !important;
+                background-color: transparent !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container" id="game-container">
+        <h1>Word Search Fun! <i class="fas fa-puzzle-piece" style="color: #667eea;"></i></h1>
+
+        <div class="controls">
+            <select id="language-select">
+                <option value="en">English</option>
+                <option value="id">Bahasa Indonesia</option>
+                <option value="es">Español</option>
+                <option value="fr">Français</option>
+            </select>
+            <button id="start-game-btn" class="primary">Start New Game <i class="fas fa-play"></i></button>
+            <button id="print-btn" class="primary">Print Game <i class="fas fa-print"></i></button>
+        </div>
+
+        <div class="setup-options">
+            <div>
+                <label>
+                    <input type="radio" name="word-setup" value="static" checked>
+                    Static Words
+                </label>
+                <label>
+                    <input type="radio" name="word-setup" value="dynamic">
+                    Dynamic Words
+                </label>
+            </div>
+            <textarea id="dynamic-words-input" class="dynamic-words-input hidden" placeholder="Enter words separated by commas (e.g., cat,dog,bird)..."></textarea>
+        </div>
+
+        <div class="game-area" id="game-area-main">
+            <div id="word-search-grid"></div>
+            <div id="word-list">
+                <h2>Words to Find</h2>
+                <ul id="words-to-find"></ul>
+            </div>
+        </div>
+    </div>
+
+    <div id="message-box" class="message-box"></div>
+
+    <script>
+        // Global variables for Firebase configuration (will be populated by the environment)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Static word lists for different languages
+        const wordLists = {
+            en: ['APPLE', 'BANANA', 'ORANGE', 'GRAPE', 'PEAR', 'PLUM', 'LEMON', 'KIWI', 'MANGO', 'CHERRY', 'BERRY', 'LIME'],
+            id: ['APEL', 'PISANG', 'JERUK', 'ANGGUR', 'PIR', 'PLUM', 'LEMON', 'KIWI', 'MANGGA', 'CERI', 'BERI', 'LIMAU'],
+            es: ['MANZANA', 'PLATANO', 'NARANJA', 'UVA', 'PERA', 'CIRUELA', 'LIMON', 'KIWI', 'MANGO', 'CEREZA', 'BAYA', 'LIMA'],
+            fr: ['POMME', 'BANANE', 'ORANGE', 'RAISIN', 'POIRE', 'PRUNE', 'CITRON', 'KIWI', 'MANGUE', 'CERISE', 'BAIE', 'CITRON VERT']
+        };
+
+        const GRID_SIZE = 12; // 12x12 grid
+
+        let currentGrid = [];
+        let currentWords = [];
+        let foundWords = new Set();
+        let isMouseDown = false;
+        let selectedCells = [];
+        let startCell = null;
+        let endCell = null;
+
+        const gameContainer = document.getElementById('game-container');
+        const gameAreaElement = document.getElementById('game-area-main'); // Reference to the game area
+        const gridElement = document.getElementById('word-search-grid');
+        const wordListElement = document.getElementById('words-to-find');
+        const languageSelect = document.getElementById('language-select');
+        const startGameBtn = document.getElementById('start-game-btn');
+        const printBtn = document.getElementById('print-btn'); // Reference to the print button
+        const staticWordsRadio = document.querySelector('input[name="word-setup"][value="static"]');
+        const dynamicWordsRadio = document.querySelector('input[name="word-setup"][value="dynamic"]');
+        const dynamicWordsInput = document.getElementById('dynamic-words-input');
+        const messageBox = document.getElementById('message-box');
+
+        /**
+         * Displays a message box with a given message.
+         * @param {string} message The message to display.
+         */
+        function showMessageBox(message) {
+            messageBox.textContent = message;
+            messageBox.classList.add('show');
+            setTimeout(() => {
+                messageBox.classList.remove('show');
+            }, 2000); // Hide after 2 seconds
+        }
+
+        /**
+         * Clears all found words and resets game state.
+         */
+        function resetGame() {
+            foundWords.clear();
+            currentGrid = [];
+            currentWords = [];
+            gridElement.innerHTML = '';
+            wordListElement.innerHTML = '';
+        }
+
+        /**
+         * Initializes the game grid with empty cells.
+         */
+        function initializeGrid() {
+            gridElement.style.gridTemplateColumns = `repeat(${GRID_SIZE}, 1fr)`;
+            // Remove old cells if any
+            gridElement.innerHTML = '';
+            for (let r = 0; r < GRID_SIZE; r++) {
+                currentGrid[r] = [];
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    currentGrid[r][c] = ''; // Initialize with empty string or placeholder
+                    const cell = document.createElement('div');
+                    cell.classList.add('grid-cell', 'rounded-lg');
+                    cell.dataset.row = r;
+                    cell.dataset.col = c;
+                    gridElement.appendChild(cell);
+                }
+            }
+        }
+
+        /**
+         * Generates a random uppercase letter.
+         * @returns {string} A random uppercase letter.
+         */
+        function getRandomLetter() {
+            const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            return alphabet[Math.floor(Math.random() * alphabet.length)];
+        }
+
+        /**
+         * Attempts to place a word on the grid.
+         * @param {string} word The word to place.
+         * @returns {boolean} True if the word was placed successfully, false otherwise.
+         */
+        function placeWord(word) {
+            const directions = [
+                [0, 1],   // Horizontal
+                [1, 0],   // Vertical
+                [1, 1],   // Diagonal Down-Right
+                [1, -1],  // Diagonal Down-Left
+                [0, -1],  // Horizontal Reversed
+                [-1, 0],  // Vertical Reversed
+                [-1, -1], // Diagonal Up-Left
+                [-1, 1]   // Diagonal Up-Right
+            ];
+
+            // Randomize directions for each attempt
+            directions.sort(() => Math.random() - 0.5);
+
+            for (let attempt = 0; attempt < 50; attempt++) { // Limit attempts to prevent infinite loops
+                const startRow = Math.floor(Math.random() * GRID_SIZE);
+                const startCol = Math.floor(Math.random() * GRID_SIZE);
+                const [dr, dc] = directions[Math.floor(Math.random() * directions.length)]; // Pick a random direction
+
+                let canPlace = true;
+                let path = [];
+
+                for (let i = 0; i < word.length; i++) {
+                    const r = startRow + i * dr;
+                    const c = startCol + i * dc;
+
+                    // Check bounds
+                    if (r < 0 || r >= GRID_SIZE || c < 0 || c >= GRID_SIZE) {
+                        canPlace = false;
+                        break;
+                    }
+
+                    // Check for conflicts
+                    if (currentGrid[r][c] !== '' && currentGrid[r][c] !== word[i]) {
+                        canPlace = false;
+                        break;
+                    }
+                    path.push({ r, c });
+                }
+
+                if (canPlace) {
+                    for (let i = 0; i < word.length; i++) {
+                        const { r, c } = path[i];
+                        currentGrid[r][c] = word[i];
+                    }
+                    return true;
+                }
+            }
+            return false; // Could not place the word
+        }
+
+        /**
+         * Populates the grid with words and fills empty cells with random letters.
+         */
+        function populateGrid() {
+            // First, try to place all words
+            const wordsToPlace = [...currentWords].sort((a, b) => b.length - a.length); // Try placing longer words first
+            for (const word of wordsToPlace) {
+                if (!placeWord(word)) {
+                    // console.warn(`Could not place word: ${word}`);
+                    // If a word cannot be placed, it might make the game too hard or impossible.
+                    // For a kids' game, we might regenerate the whole board or exclude the word.
+                    // For now, we'll just log and continue.
+                }
+            }
+
+            // Fill empty cells with random letters
+            for (let r = 0; r < GRID_SIZE; r++) {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    if (currentGrid[r][c] === '') {
+                        currentGrid[r][c] = getRandomLetter();
+                    }
+                }
+            }
+
+            // Render the grid to the DOM
+            const cells = gridElement.children;
+            for (let r = 0; r < GRID_SIZE; r++) {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    const index = r * GRID_SIZE + c;
+                    cells[index].textContent = currentGrid[r][c];
+                }
+            }
+        }
+
+        /**
+         * Renders the list of words to find.
+         */
+        function renderWordList() {
+            wordListElement.innerHTML = '';
+            currentWords.forEach(word => {
+                const li = document.createElement('li');
+                li.textContent = word;
+                li.id = `word-${word}`; // Assign an ID for easy lookup
+                if (foundWords.has(word)) {
+                    li.classList.add('found');
+                }
+                wordListElement.appendChild(li);
+            });
+        }
+
+        /**
+         * Handles mouse down event on a grid cell.
+         * @param {Event} e The mouse event.
+         */
+        function handleMouseDown(e) {
+            if (e.target.classList.contains('grid-cell')) {
+                isMouseDown = true;
+                startCell = e.target;
+                selectedCells = [e.target];
+                e.target.classList.add('selected');
+            }
+        }
+
+        /**
+         * Handles mouse enter event on a grid cell while dragging.
+         * @param {Event} e The mouse event.
+         */
+        function handleMouseEnter(e) {
+            if (isMouseDown && e.target.classList.contains('grid-cell')) {
+                endCell = e.target;
+                updateSelection();
+            }
+        }
+
+        /**
+         * Handles mouse up event, checks for a found word.
+         */
+        function handleMouseUp() {
+            if (isMouseDown && startCell && endCell) {
+                checkWord();
+            }
+            isMouseDown = false;
+            startCell = null;
+            endCell = null;
+            clearSelection();
+        }
+
+        /**
+         * Updates the visual selection of cells as the user drags.
+         */
+        function updateSelection() {
+            const cells = Array.from(gridElement.children);
+            cells.forEach(cell => cell.classList.remove('selected'));
+            selectedCells = [];
+
+            if (!startCell || !endCell) return;
+
+            const r1 = parseInt(startCell.dataset.row);
+            const c1 = parseInt(startCell.dataset.col);
+            const r2 = parseInt(endCell.dataset.row);
+            const c2 = parseInt(endCell.dataset.col);
+
+            const dr = r2 - r1;
+            const dc = c2 - c1;
+
+            // Check if it's a straight line (horizontal, vertical, diagonal)
+            const isHorizontal = dr === 0;
+            const isVertical = dc === 0;
+            const isDiagonal = Math.abs(dr) === Math.abs(dc);
+
+            if (!isHorizontal && !isVertical && !isDiagonal) {
+                // If not a straight line, only select start and end
+                startCell.classList.add('selected');
+                endCell.classList.add('selected');
+                selectedCells.push(startCell, endCell);
+                return;
+            }
+
+            const length = Math.max(Math.abs(dr), Math.abs(dc)) + 1;
+            const stepR = dr === 0 ? 0 : dr / Math.abs(dr);
+            const stepC = dc === 0 ? 0 : dc / Math.abs(dc);
+
+            for (let i = 0; i < length; i++) {
+                const r = r1 + i * stepR;
+                const c = c1 + i * stepC;
+                const cell = document.querySelector(`.grid-cell[data-row="${r}"][data-col="${c}"]`);
+                if (cell) {
+                    cell.classList.add('selected');
+                    selectedCells.push(cell);
+                }
+            }
+        }
+
+        /**
+         * Clears all selected cells from the grid.
+         */
+        function clearSelection() {
+            selectedCells.forEach(cell => cell.classList.remove('selected'));
+            selectedCells = [];
+        }
+
+        /**
+         * Checks if the selected sequence of letters forms a valid word.
+         */
+        function checkWord() {
+            if (selectedCells.length === 0) return;
+
+            let selectedWord = '';
+            // Ensure cells are in order from start to end (important for reversed words)
+            selectedCells.sort((a, b) => {
+                const rA = parseInt(a.dataset.row);
+                const cA = parseInt(a.dataset.col);
+                const rB = parseInt(b.dataset.row);
+                const cB = parseInt(b.dataset.col);
+
+                // Determine sorting based on direction of selection
+                const r1 = parseInt(startCell.dataset.row);
+                const c1 = parseInt(startCell.dataset.col);
+                const r2 = parseInt(endCell.dataset.row);
+                const c2 = parseInt(endCell.dataset.col);
+
+                const dr = r2 - r1;
+                const dc = c2 - c1;
+
+                if (dr === 0) { // Horizontal
+                    return (cA - cB) * Math.sign(dc);
+                } else if (dc === 0) { // Vertical
+                    return (rA - rB) * Math.sign(dr);
+                } else { // Diagonal
+                    if (Math.sign(dr) === Math.sign(dc)) { // Down-right or Up-left
+                        return (rA - rB) * Math.sign(dr);
+                    } else { // Down-left or Up-right
+                        return (rA - rB) * Math.sign(dr);
+                    }
+                }
+            });
+
+            selectedCells.forEach(cell => {
+                selectedWord += cell.textContent;
+            });
+
+            // Check both forward and reversed
+            const reversedWord = selectedWord.split('').reverse().join('');
+
+            const foundMatch = currentWords.find(word =>
+                word === selectedWord || word === reversedWord
+            );
+
+            if (foundMatch && !foundWords.has(foundMatch)) {
+                foundWords.add(foundMatch);
+                selectedCells.forEach(cell => cell.classList.add('found-word'));
+                document.getElementById(`word-${foundMatch}`).classList.add('found');
+                showMessageBox(`Found: ${foundMatch}!`);
+                if (foundWords.size === currentWords.length) {
+                    setTimeout(() => showMessageBox("Congratulations! You found all the words!"), 500);
+                }
+            } else if (foundMatch && foundWords.has(foundMatch)) {
+                 showMessageBox("You already found that word!");
+            } else if (selectedWord.length > 1) { // Only show message for invalid selections longer than 1 character
+                 showMessageBox("Keep trying! That's not a word.");
+            }
+        }
+
+        /**
+         * Starts a new game: resets state, gets words, generates grid, and renders lists.
+         */
+        function startNewGame() {
+            resetGame();
+
+            const selectedLanguage = languageSelect.value;
+            const isStatic = staticWordsRadio.checked;
+
+            if (isStatic) {
+                currentWords = [...wordLists[selectedLanguage]]; // Copy to avoid modifying original
+            } else {
+                const dynamicInput = dynamicWordsInput.value.trim();
+                if (dynamicInput) {
+                    currentWords = dynamicInput.toUpperCase().split(',').map(word => word.trim()).filter(word => word.length > 0);
+                    if (currentWords.length === 0) {
+                        showMessageBox("Please enter some words for dynamic setup.");
+                        return;
+                    }
+                } else {
+                    showMessageBox("Please enter words for dynamic setup or switch to static.");
+                    return;
+                }
+            }
+             // Shuffle words to make each game slightly different in word list order
+            currentWords.sort(() => Math.random() - 0.5);
+
+            initializeGrid();
+            populateGrid();
+            renderWordList();
+            showMessageBox("New Game Started!");
+        }
+
+        /**
+         * Handles printing the game grid and word list.
+         */
+        function handlePrint() {
+            window.print();
+        }
+
+
+        // Event Listeners
+        languageSelect.addEventListener('change', () => {
+            if (staticWordsRadio.checked) { // Only update if static is selected
+                startNewGame(); // Restart game with new language's static words
+            }
+        });
+
+        startGameBtn.addEventListener('click', startNewGame);
+        printBtn.addEventListener('click', handlePrint); // Event listener for print button
+
+
+        gridElement.addEventListener('mousedown', handleMouseDown);
+        gridElement.addEventListener('mouseenter', handleMouseEnter, true); // Use capture phase for better drag
+        gridElement.addEventListener('mouseup', handleMouseUp);
+        gridElement.addEventListener('mouseleave', handleMouseUp); // End selection if mouse leaves grid
+
+        dynamicWordsRadio.addEventListener('change', () => {
+            dynamicWordsInput.classList.remove('hidden');
+        });
+        staticWordsRadio.addEventListener('change', () => {
+            dynamicWordsInput.classList.add('hidden');
+        });
+
+
+        // Initial game setup on load
+        window.onload = () => {
+            startNewGame(); // Start first game
+        };
+    </script>
+</body>
+</html>
