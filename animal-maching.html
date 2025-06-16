@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animal Friends Matching Game</title>
+    <!-- Tailwind CSS CDN for general styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter for a friendly, legible look -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom CSS for game-specific styles, overrides Tailwind where necessary */
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(to bottom right, #a7f3d0, #fde68a); /* Soft gradient background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            overflow: auto; /* Allow scrolling if content overflows */
+        }
+
+        .game-container {
+            background-color: #ffffff;
+            border-radius: 20px; /* More rounded corners */
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); /* Deeper shadow */
+            padding: 30px;
+            text-align: center;
+            max-width: 90%; /* Responsive max width */
+            width: 800px; /* Max width for desktop */
+            position: relative;
+        }
+
+        .game-title {
+            color: #334155; /* Darker text for readability */
+            font-size: 2.5rem; /* Larger title */
+            font-weight: 700;
+            margin-bottom: 25px;
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap; /* Allow wrapping on small screens */
+            gap: 20px 40px; /* Vertical and horizontal gap */
+            margin-bottom: 25px;
+            font-size: 1.2rem;
+            color: #475569;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); /* Responsive grid columns */
+            gap: 15px;
+            justify-content: center; /* Center cards in the grid */
+            align-items: center;
+            width: 100%;
+            margin: 0 auto;
+            max-width: 700px; /* Max width for the grid to prevent overly large cards */
+        }
+
+        .card {
+            width: 100%;
+            height: 100px; /* Fixed height for cards */
+            perspective: 1000px; /* For 3D flip effect */
+            cursor: pointer;
+            position: relative;
+            border-radius: 12px; /* Rounded corners for cards */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* Soft shadow for cards */
+            transition: transform 0.5s ease;
+        }
+
+        .card.matched {
+            opacity: 0.7; /* Slightly dim matched cards */
+            pointer-events: none; /* Disable clicks on matched cards */
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); /* Lighter shadow for matched */
+        }
+
+        .card-inner {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+            border-radius: 12px;
+        }
+
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card-face, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden; /* Hide back of card during flip */
+            backface-visibility: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 12px;
+            font-size: 3.5rem; /* Large emoji size */
+            font-weight: bold;
+        }
+
+        .card-back {
+            background: linear-gradient(to top right, #60a5fa, #818cf8); /* Blue/Purple gradient for card back */
+            color: #ffffff;
+        }
+
+        .card-face {
+            background-color: #f0f9ff; /* Light blue for card face */
+            color: #0f172a;
+            transform: rotateY(180deg);
+        }
+
+        .button {
+            background: linear-gradient(to right, #fbbf24, #f97316); /* Orange/Yellow gradient for buttons */
+            color: white;
+            padding: 12px 28px;
+            border-radius: 9999px; /* Pill shape */
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            margin-top: 30px;
+            box-shadow: 0 5px 15px rgba(249, 115, 22, 0.3); /* Button shadow */
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        .button:hover {
+            transform: translateY(-3px); /* Lift effect on hover */
+            box-shadow: 0 8px 20px rgba(249, 115, 22, 0.4);
+        }
+
+        /* Message Box Styling */
+        .message-box {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            font-size: 1.8rem;
+            color: #1e293b;
+            z-index: 1000;
+            display: none; /* Hidden by default */
+            max-width: 90%; /* Responsive width */
+        }
+
+        .message-box.show {
+            display: block;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 640px) {
+            .game-title {
+                font-size: 2rem;
+            }
+            .game-info {
+                font-size: 1rem;
+                gap: 15px; /* Adjust gap for smaller screens */
+            }
+            .card-grid {
+                grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); /* Smaller cards on small screens */
+                gap: 10px;
+            }
+            .card {
+                height: 70px; /* Smaller card height */
+            }
+            .card-face, .card-back {
+                font-size: 2.2rem; /* Smaller emoji size */
+            }
+            .button {
+                padding: 10px 20px;
+                font-size: 1rem;
+            }
+            .message-box {
+                font-size: 1.5rem;
+                padding: 30px;
+            }
+        }
+    </style>
+</head>
+<body class="selection:bg-yellow-200">
+    <div class="game-container">
+        <h1 class="game-title">Animal Friends Matching Game</h1>
+        <div class="game-info">
+            <div id="levelDisplay">Level: 1</div>
+            <div id="matches">Matches: 0</div>
+            <div id="flips">Flips: 0</div>
+            <div id="timer">Time: 0s</div>
+        </div>
+        <div class="card-grid" id="gameGrid">
+            <!-- Cards will be dynamically inserted here by JavaScript -->
+        </div>
+        <button class="button" id="resetButton">Restart Game</button>
+
+        <!-- Message Box for game end/instructions -->
+        <div id="messageBox" class="message-box">
+            <p id="messageText"></p>
+            <button class="button mt-6" id="messageButton">OK!</button>
+        </div>
+    </div>
+
+    <!-- Tone.js CDN for sound effects -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+    <script>
+        // Game configuration and state variables
+        const allEmojis = ['🦁', '🐘', '🐒', '🐑', '🦆', '🐠', '🐻', '🐦', '🐱', '🐶', '🐰', '🐢'];
+        // Define how many pairs are in each level
+        const levelConfigurations = [
+            { level: 1, pairs: 6 },  // 12 cards (3x4 grid or 4x3)
+            { level: 2, pairs: 8 },  // 16 cards (4x4 grid)
+            { level: 3, pairs: 10 }, // 20 cards (4x5 grid or 5x4)
+            { level: 4, pairs: 12 }  // 24 cards (4x6 grid or 6x4)
+        ];
+
+        let currentLevel = 1;
+        const maxLevel = levelConfigurations.length;
+        let cards = [];
+        let flippedCards = [];
+        let matchedPairs = 0;
+        let totalFlips = 0;
+        let timer = 0;
+        let timerInterval;
+        let gameStarted = false;
+        let canFlip = true; // Prevents rapid clicking issues
+
+        // DOM elements
+        const gameGrid = document.getElementById('gameGrid');
+        const levelDisplay = document.getElementById('levelDisplay');
+        const matchesDisplay = document.getElementById('matches');
+        const flipsDisplay = document.getElementById('flips');
+        const timerDisplay = document.getElementById('timer');
+        const resetButton = document.getElementById('resetButton');
+        const messageBox = document.getElementById('messageBox');
+        const messageText = document.getElementById('messageText');
+        const messageButton = document.getElementById('messageButton');
+
+        // Sound effects using Tone.js
+        const matchSound = new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: 'sine' },
+            envelope: { attack: 0.005, decay: 0.1, sustain: 0.05, release: 0.5 },
+            volume: -10
+        }).toDestination();
+
+        const noMatchSound = new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: 'triangle' },
+            envelope: { attack: 0.001, decay: 0.05, sustain: 0.01, release: 0.2 },
+            volume: -15
+        }).toDestination();
+
+        const gameEndSound = new Tone.Synth({
+            oscillator: { type: 'sawtooth' },
+            envelope: { attack: 0.1, decay: 0.5, sustain: 0.2, release: 1 },
+            volume: -5
+        }).toDestination();
+
+        const levelUpSound = new Tone.Synth({
+            oscillator: { type: 'square' },
+            envelope: { attack: 0.05, decay: 0.3, sustain: 0.1, release: 0.5 },
+            volume: -7
+        }).toDestination();
+
+
+        /**
+         * Shuffles an array randomly.
+         * @param {Array} array - The array to shuffle.
+         * @returns {Array} The shuffled array.
+         */
+        function shuffle(array) {
+            let currentIndex = array.length, randomIndex;
+            // While there remain elements to shuffle.
+            while (currentIndex !== 0) {
+                // Pick a remaining element.
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                // And swap it with the current element.
+                [array[currentIndex], array[randomIndex]] = [
+                    array[randomIndex], array[currentIndex]];
+            }
+            return array;
+        }
+
+        /**
+         * Creates and shuffles the game cards based on the current level.
+         */
+        function createCards() {
+            // Get number of pairs for the current level
+            const numPairs = levelConfigurations[currentLevel - 1].pairs;
+            // Select a subset of emojis for the current level
+            let currentLevelEmojis = allEmojis.slice(0, numPairs);
+
+            // Duplicate emojis to create pairs
+            let gameEmojis = [...currentLevelEmojis, ...currentLevelEmojis];
+            // Shuffle the emojis to randomize their positions
+            gameEmojis = shuffle(gameEmojis);
+
+            // Update grid columns based on the number of cards for better layout
+            // Aim for roughly square or slightly rectangular grid
+            let gridColumns;
+            if (numPairs === 6) gridColumns = 'repeat(4, minmax(100px, 1fr))'; // 12 cards, 4 cols
+            else if (numPairs === 8) gridColumns = 'repeat(4, minmax(100px, 1fr))'; // 16 cards, 4 cols
+            else if (numPairs === 10) gridColumns = 'repeat(5, minmax(100px, 1fr))'; // 20 cards, 5 cols
+            else if (numPairs === 12) gridColumns = 'repeat(6, minmax(100px, 1fr))'; // 24 cards, 6 cols
+            else gridColumns = 'repeat(auto-fit, minmax(100px, 1fr))'; // Fallback
+            gameGrid.style.gridTemplateColumns = gridColumns;
+
+
+            cards = gameEmojis.map((emoji, index) => {
+                // Create card element
+                const card = document.createElement('div');
+                card.classList.add('card', 'rounded-xl', 'cursor-pointer');
+                card.dataset.index = index; // Store original index for identification
+                card.dataset.emoji = emoji; // Store the emoji for matching
+
+                // Create inner card for flip effect
+                const cardInner = document.createElement('div');
+                cardInner.classList.add('card-inner');
+
+                // Create card face (showing emoji)
+                const cardFace = document.createElement('div');
+                cardFace.classList.add('card-face');
+                cardFace.textContent = emoji;
+
+                // Create card back (hidden by default)
+                const cardBack = document.createElement('div');
+                cardBack.classList.add('card-back');
+                
+                cardInner.appendChild(cardFace);
+                cardInner.appendChild(cardBack);
+                card.appendChild(cardInner);
+
+                // Add click listener
+                card.addEventListener('click', handleCardClick);
+                return card;
+            });
+
+            // Append all cards to the game grid
+            gameGrid.innerHTML = ''; // Clear previous cards
+            cards.forEach(card => gameGrid.appendChild(card));
+        }
+
+        /**
+         * Starts the game timer.
+         */
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval); // Clear any existing timer
+            timer = 0;
+            timerDisplay.textContent = `Time: ${timer}s`;
+            timerInterval = setInterval(() => {
+                timer++;
+                timerDisplay.textContent = `Time: ${timer}s`;
+            }, 1000);
+        }
+
+        /**
+         * Stops the game timer.
+         */
+        function stopTimer() {
+            clearInterval(timerInterval);
+        }
+
+        /**
+         * Handles a card click event.
+         * @param {Event} event - The click event.
+         */
+        function handleCardClick(event) {
+            if (!canFlip || flippedCards.length === 2) return; // Prevent flipping if busy or two cards already flipped
+
+            // Start the game and timer on the first click of a level
+            if (!gameStarted) {
+                gameStarted = true;
+                startTimer();
+            }
+
+            const clickedCard = event.currentTarget;
+
+            // Do not allow clicking already flipped or matched cards
+            if (clickedCard.classList.contains('flipped') || clickedCard.classList.contains('matched')) {
+                return;
+            }
+
+            // Flip the card
+            clickedCard.classList.add('flipped');
+            flippedCards.push(clickedCard);
+            totalFlips++;
+            flipsDisplay.textContent = `Flips: ${totalFlips}`;
+
+            // If two cards are flipped, check for a match
+            if (flippedCards.length === 2) {
+                canFlip = false; // Disable further flips
+                setTimeout(checkForMatch, 1000); // Wait 1 second before checking
+            }
+        }
+
+        /**
+         * Checks if the two flipped cards are a match.
+         */
+        function checkForMatch() {
+            const [card1, card2] = flippedCards;
+            const emoji1 = card1.dataset.emoji;
+            const emoji2 = card2.dataset.emoji;
+            
+            // Get number of pairs for the current level
+            const numPairs = levelConfigurations[currentLevel - 1].pairs;
+
+            if (emoji1 === emoji2) {
+                // Match found!
+                matchSound.triggerAttackRelease('C4', '8n'); // Play C4 for a match
+                card1.classList.add('matched');
+                card2.classList.add('matched');
+                matchedPairs++;
+                matchesDisplay.textContent = `Matches: ${matchedPairs}`;
+
+                if (matchedPairs === numPairs) { // Check against current level's total pairs
+                    // All pairs matched for the current level
+                    endLevel();
+                }
+            } else {
+                // No match, flip cards back
+                noMatchSound.triggerAttackRelease('G#3', '16n'); // Play G#3 for no match
+                setTimeout(() => {
+                    card1.classList.remove('flipped');
+                    card2.classList.remove('flipped');
+                }, 800); // Shorter delay for flipping back
+            }
+
+            // Reset flipped cards and enable flipping
+            flippedCards = [];
+            canFlip = true;
+        }
+
+        /**
+         * Handles logic when a level is completed.
+         */
+        function endLevel() {
+            stopTimer();
+            gameStarted = false;
+            
+            if (currentLevel < maxLevel) {
+                // Level completed, move to next level
+                levelUpSound.triggerAttackRelease('D4', '0.5'); // Play a distinct sound for level up
+                messageText.innerHTML = `
+                    Level ${currentLevel} Complete! 🎉<br>
+                    Time: ${timer} seconds<br>
+                    Flips: ${totalFlips}<br><br>
+                    Ready for Level ${currentLevel + 1}?
+                `;
+                messageButton.textContent = "Next Level!";
+                messageButton.onclick = nextLevel; // Set handler for next level
+            } else {
+                // All levels completed - game over!
+                gameEndSound.triggerAttackRelease(['C4', 'E4', 'G4'], '1s'); // Play a chord for final game end
+                messageText.innerHTML = `
+                    🎊 Game Complete! 🎊<br>
+                    You mastered all levels!<br>
+                    Final Time for this level: ${timer} seconds<br>
+                    Total Flips this level: ${totalFlips}
+                `;
+                messageButton.textContent = "Play Again!";
+                messageButton.onclick = resetGame; // Set handler to restart the whole game
+            }
+            showMessageBox();
+        }
+
+
+        /**
+         * Advances the game to the next level.
+         */
+        function nextLevel() {
+            currentLevel++;
+            resetLevelState(); // Reset stats for the new level
+            createCards(); // Create new cards for the new level
+            hideMessageBox();
+            // Optional: Show "Starting Level X" message briefly
+            showMessageBox(`Starting Level ${currentLevel}!`, 1500); // Show for 1.5 seconds
+            messageButton.textContent = "OK!"; // Reset button text for general instruction
+            messageButton.onclick = hideMessageBox; // Reset button handler to just hide box
+        }
+        
+        /**
+         * Resets state variables for a new level or game start.
+         */
+        function resetLevelState() {
+            cards = [];
+            flippedCards = [];
+            matchedPairs = 0;
+            totalFlips = 0;
+            timer = 0;
+            gameStarted = false;
+            canFlip = true;
+
+            levelDisplay.textContent = `Level: ${currentLevel}`;
+            matchesDisplay.textContent = `Matches: ${matchedPairs}`;
+            flipsDisplay.textContent = `Flips: ${totalFlips}`;
+            timerDisplay.textContent = `Time: ${timer}s`;
+            gameGrid.innerHTML = ''; // Clear the grid
+            stopTimer(); // Ensure timer is stopped
+        }
+
+        /**
+         * Resets the entire game to its initial state (Level 1).
+         */
+        function resetGame() {
+            currentLevel = 1; // Start from Level 1
+            resetLevelState(); // Reset all game state
+            createCards(); // Recreate cards for Level 1
+            hideMessageBox(); // Hide message box if shown
+            // Show initial instructions for the fresh start
+            showMessageBox("Welcome! Match the animal pairs. Click 'OK!' to start playing Level 1.", 0);
+            messageButton.textContent = "OK!";
+            messageButton.onclick = hideMessageBox; // Ensure initial button just hides box
+        }
+
+        /**
+         * Displays the message box.
+         * @param {string} message - The message to display.
+         * @param {number} [autoHideDelay=0] - Optional delay in ms to auto-hide the message box. 0 means no auto-hide.
+         */
+        function showMessageBox(message = '', autoHideDelay = 0) {
+            messageText.innerHTML = message; // Use innerHTML for line breaks
+            messageBox.classList.add('show');
+            if (autoHideDelay > 0) {
+                setTimeout(() => {
+                    hideMessageBox();
+                }, autoHideDelay);
+            }
+        }
+
+        /**
+         * Hides the message box.
+         */
+        function hideMessageBox() {
+            messageBox.classList.remove('show');
+        }
+
+        // Event Listeners
+        resetButton.addEventListener('click', resetGame);
+        // Initial message button click handler will be set on window.onload
+        messageButton.addEventListener('click', hideMessageBox); // Default handler, overridden by game logic
+
+        // Initialize the game when the window loads
+        window.onload = function() {
+            resetLevelState(); // Initialize state for Level 1
+            createCards(); // Create initial cards
+            // Show initial instructions for the first game
+            showMessageBox("Welcome! Match the animal pairs. Click 'OK!' to start playing Level 1.", 0);
+            messageButton.textContent = "OK!";
+            messageButton.onclick = hideMessageBox; // Ensure initial button just hides box
+        };
+    </script>
+</body>
+</html>
